@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevCow Test Case Generator</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🐮 DevCow Test Case Generator</h1>
+    
+    <!-- Tab Navigation -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="test-config">Test Config</button>
+      <button class="tab-btn" data-tab="field-manager">Field Manager</button>
+    </div>
+
+    <!-- Test Configuration Tab -->
+    <div id="test-config" class="tab-content active">
+      <div class="form-group">
+        <label for="country-selector">Country:</label>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <select id="country-selector" style="flex:1"></select>
+          <input type="text" id="country-input" placeholder="Add country..." style="width:160px" />
+          <button id="country-add-btn">➕</button>
+          <button id="country-remove-btn">➖</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="sandbox-field-selector">Sandbox field/value:</label>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <select id="sandbox-field-selector" style="flex:1; min-width:200px"></select>
+          <select id="sandbox-value-selector" style="flex:1; min-width:220px"></select>
+        </div>
+        <p class="help-text">Pick any field from Field Manager to act as the Sandbox mapping, then choose its value to inject during tests.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="field-to-test">Field to Test:</label>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <select id="field-to-test" style="flex:1">
+            <option value="">(None)</option>
+          </select>
+          <input type="text" id="field-to-test-input" placeholder="New Field Label..." style="width:160px" />
+          <button id="field-to-test-add-btn">Add</button>
+          <button id="field-to-test-remove-btn">Remove</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Test Case Values:</label>
+        <input type="text" id="test-case-1" placeholder="Test Case 1">
+        <input type="text" id="test-case-2" placeholder="Test Case 2">
+        <input type="text" id="test-case-3" placeholder="Test Case 3">
+        <input type="text" id="test-case-4" placeholder="Test Case 4">
+        <input type="text" id="test-case-5" placeholder="Test Case 5">
+      </div>
+
+      <div class="form-group checkbox-group">
+        <label>
+          <input type="checkbox" id="run-test-transaction-checkbox" checked>
+          <span>✅ Check "Run A Test Transaction" before verify</span>
+        </label>
+        <p class="help-text">When checked, the extension will click the "Run A Test Transaction" checkbox on the form before clicking Verify.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="interface-url">Interface URL:</label>
+        <select id="interface-url">
+          <option value="https://192.168.1.253:44333/verification">https://192.168.1.253:44333/verification</option>
+          <option value="custom">Custom URL...</option>
+        </select>
+        <input type="text" id="interface-url-custom" placeholder="Enter custom URL" style="display: none; margin-top: 8px;">
+      </div>
+
+      <div class="form-group">
+        <label for="debug-url">Debug URL:</label>
+        <select id="debug-url">
+          <option value="https://192.168.1.253:44331/GDCDebug/DebugRecordTransaction">https://192.168.1.253:44331/GDCDebug/DebugRecordTransaction</option>
+          <option value="custom">Custom URL...</option>
+        </select>
+        <input type="text" id="debug-url-custom" placeholder="Enter custom URL" style="display: none; margin-top: 8px;">
+      </div>
+
+      <button id="generate-tests-btn">Generate Tests</button>
+      <p id="status-display"></p>
+    </div>
+
+    <!-- Field Manager Tab -->
+    <div id="field-manager" class="tab-content">
+      <h2>Manage Field Values</h2>
+      <p class="help-text">Add or remove values for each field. These will be used randomly when filling forms.</p>
+      <div class="form-group">
+        <label for="new-dom-id">Add/Remove UI field by DOM id:</label>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <input type="text" id="new-dom-id" placeholder="textarea/select id (e.g. textarea-field-MyField)" style="width:260px" />
+          <input type="text" id="new-dom-label" placeholder="Label (e.g. My Field)" style="width:180px" />
+          <button id="add-dom-field-btn">Add Field</button>
+          <button id="remove-dom-field-btn">Remove Field</button>
+        </div>
+        <p class="help-text">Add a field that exists on the interface but not in the extension by entering its DOM id and label. You can then manage its values below.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="new-select-id">Add/Remove UI field by Select id (dropdown):</label>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <input type="text" id="new-select-id" placeholder="select id (e.g. option-field-Province)" style="width:260px" />
+          <input type="text" id="new-select-label" placeholder="Label (e.g. Province)" style="width:180px" />
+          <button id="add-select-field-btn">Add Field</button>
+          <button id="remove-select-field-btn">Remove Field</button>
+        </div>
+        <p class="help-text">On add, the extension reads the dropdown options from the current page and seeds them as default values for this field.</p>
+      </div>
+
+      <div class="field-list" id="field-list">
+        <!-- Fields will be populated by JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <script src="fieldManager.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
