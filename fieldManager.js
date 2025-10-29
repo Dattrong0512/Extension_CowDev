@@ -109,8 +109,8 @@ async function loadCustomFields() {
       // Back-compat: if value is string label, wrap to object
       const normalized = {};
       for (const [k, v] of Object.entries(raw)) {
-        if (typeof v === 'string') normalized[k] = { label: v, selector: '' };
-        else normalized[k] = v;
+        if (typeof v === 'string') normalized[k] = { label: v, selector: '', type: 'text' };
+        else normalized[k] = { label: v.label || k, selector: v.selector || '', type: v.type || 'text' };
       }
       resolve(normalized);
     });
@@ -123,11 +123,11 @@ async function saveCustomFields(obj) {
   });
 }
 
-async function addCustomField(key, label, selector = '') {
+async function addCustomField(key, label, selector = '', type = 'text') {
   const fields = await loadCustomFields();
   if (!key || !label) throw new Error('key and label required');
   if (fields[key]) throw new Error('field key already exists');
-  fields[key] = { label, selector };
+  fields[key] = { label, selector, type };
   await saveCustomFields(fields);
   // Ensure storage has an entry for values (empty array)
   const values = await loadFieldValues();
@@ -161,7 +161,7 @@ function deriveKeyFromSelector(selector) {
 async function addDomField(selectorId, label) {
   if (!selectorId || !label) throw new Error('selector id and label required');
   const key = deriveKeyFromSelector(selectorId);
-  return addCustomField(key, label, selectorId.startsWith('#') ? selectorId : `#${selectorId}`);
+  return addCustomField(key, label, selectorId.startsWith('#') ? selectorId : `#${selectorId}`, 'text');
 }
 
 async function removeDomFieldBySelector(selectorId) {
@@ -171,6 +171,21 @@ async function removeDomFieldBySelector(selectorId) {
   const entry = Object.entries(fields).find(([k, v]) => (v && v.selector) === sel);
   const key = entry ? entry[0] : deriveKeyFromSelector(selectorId);
   return removeCustomField(key);
+}
+
+// Convenience for checkbox fields
+async function addCheckboxField(selectorId, label) {
+  if (!selectorId || !label) throw new Error('selector id and label required');
+  const key = deriveKeyFromSelector(selectorId);
+  // Register custom field with type=checkbox
+  const fields = await addCustomField(key, label, selectorId.startsWith('#') ? selectorId : `#${selectorId}`, 'checkbox');
+  // Seed default values Checked/Unchecked if none
+  const values = await loadFieldValues();
+  if (!Array.isArray(values[key]) || values[key].length === 0) {
+    values[key] = ['checked', 'unchecked'];
+    await saveFieldValues(values);
+  }
+  return fields;
 }
 
 // ------------------ Testable fields list (used by "Field to Test" select) ------------------

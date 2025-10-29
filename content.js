@@ -343,8 +343,11 @@ async function applyCustomDomFields() {
       : `#${selector}`;
     const el = findElementFlexible(sel, label);
     if (el) {
-      console.log(`Filling custom field "${label}" (${sel}) with value:`, value);
-      await safeSetValue(el, value);
+      const isCheckbox = (meta && meta.type) === 'checkbox' || (el.type && el.type.toLowerCase() === 'checkbox');
+      const boolVal = String(value).toLowerCase();
+      const valToUse = isCheckbox ? (boolVal === 'checked' || boolVal === 'true' || boolVal === '1' || boolVal === 'yes' || boolVal === 'on') : value;
+      console.log(`Filling custom field "${label}" (${sel}) with value:`, valToUse);
+      await safeSetValue(el, valToUse);
     } else {
       console.warn(`Custom field target not found for "${label}" using ${sel}`);
     }
@@ -468,6 +471,50 @@ async function safeSetValue(targetOrSelector, value) {
     try { el.dispatchEvent(new Event('blur', { bubbles: true })); } catch (_) {}
   };
 
+  // Normalize common boolean-ish strings for checkbox handling
+  const toBoolean = (v) => {
+    if (typeof v === 'boolean') return v;
+    const s = String(v || '').trim().toLowerCase();
+    if (s === '' || s === 'false' || s === '0' || s === 'no' || s === 'unchecked' || s === 'off') return false;
+    if (s === 'true' || s === '1' || s === 'yes' || s === 'checked' || s === 'on') return true;
+    return !!s; // fallback: non-empty becomes true
+  };
+
+  // Robustly toggle a checkbox including styled/label-driven ones
+  const setCheckboxState = (checkboxEl, desired) => {
+    if (!checkboxEl) return;
+    const want = toBoolean(desired);
+    const clickSafe = (el) => {
+      try { el.click(); } catch (_) { try { el.dispatchEvent(new MouseEvent('click', { bubbles: true })); } catch (_) {} }
+    };
+
+    const ensure = () => {
+      checkboxEl.checked = want;
+      dispatchAll(checkboxEl);
+    };
+
+    // If already correct, still dispatch change to be safe
+    if (checkboxEl.checked === want) { dispatchAll(checkboxEl); return; }
+
+    // 1) Native click on input
+    clickSafe(checkboxEl);
+    if (checkboxEl.checked === want) { dispatchAll(checkboxEl); return; }
+
+    // 2) Click associated label (for/id or wrapping label)
+    const id = checkboxEl.id || '';
+    const labelFor = id ? document.querySelector(`label[for="${CSS.escape(id)}"]`) : null;
+    const wrapLabel = checkboxEl.closest && checkboxEl.closest('label');
+    if (labelFor) { clickSafe(labelFor); if (checkboxEl.checked === want) { dispatchAll(checkboxEl); return; } }
+    if (wrapLabel) { clickSafe(wrapLabel); if (checkboxEl.checked === want) { dispatchAll(checkboxEl); return; } }
+
+    // 3) Click common adjacent styled toggles (like .checkbox-icon)
+    const icon = (wrapLabel || checkboxEl.parentElement)?.querySelector?.('.checkbox-icon, .ui-checkbox, .toggle, .switch');
+    if (icon) { clickSafe(icon); if (checkboxEl.checked === want) { dispatchAll(checkboxEl); return; } }
+
+    // 4) Force state + fire events
+    ensure();
+  };
+
   if (element.tagName === 'SELECT') {
     const options = Array.from(element.options || []);
     let matched = options.find(o => o.value == value);
@@ -484,14 +531,22 @@ async function safeSetValue(targetOrSelector, value) {
   const tag = element.tagName;
   const type = (element.type || '').toLowerCase();
   try {
+    // If user targeted a label that contains a checkbox, handle it gracefully
+    if (tag === 'LABEL') {
+      const cb = element.querySelector('input[type="checkbox"]');
+      if (cb) { setCheckboxState(cb, value); return; }
+    }
     if (tag === 'INPUT') {
       // Use native setter so React/Vue listeners fire
       const proto = type === 'checkbox' ? window.HTMLInputElement.prototype : window.HTMLInputElement.prototype;
       const setter = Object.getOwnPropertyDescriptor(proto, 'value') && Object.getOwnPropertyDescriptor(proto, 'value').set;
-      if (setter) setter.call(element, value);
-      else element.value = value;
-      if (type === 'checkbox') element.checked = !!value;
-      dispatchAll(element);
+      if (type === 'checkbox') {
+        setCheckboxState(element, value);
+      } else {
+        if (setter) setter.call(element, value);
+        else element.value = value;
+        dispatchAll(element);
+      }
     } else if (tag === 'TEXTAREA') {
       const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
       if (setter) setter.call(element, value); else element.value = value;

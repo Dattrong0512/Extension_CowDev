@@ -66,6 +66,11 @@ document.addEventListener('DOMContentLoaded', async function() {
   const removeSelectFieldBtn = document.getElementById('remove-select-field-btn');
   const selectIdInput = document.getElementById('new-select-id');
   const selectLabelInput = document.getElementById('new-select-label');
+  // Checkbox field add/remove controls
+  const addCheckboxFieldBtn = document.getElementById('add-checkbox-field-btn');
+  const removeCheckboxFieldBtn = document.getElementById('remove-checkbox-field-btn');
+  const checkboxIdInput = document.getElementById('new-checkbox-id');
+  const checkboxLabelInput = document.getElementById('new-checkbox-label');
   
   // Handle URL dropdown changes
   const interfaceUrlSelect = document.getElementById('interface-url');
@@ -291,6 +296,38 @@ document.addEventListener('DOMContentLoaded', async function() {
         await loadFieldManager();
         await populateFieldToTestSelect();
       } catch (e) { alert(e.message || e); }
+    });
+  }
+
+  // Add/Remove Checkbox field (by checkbox id and label)
+  if (addCheckboxFieldBtn) {
+    addCheckboxFieldBtn.addEventListener('click', async () => {
+      const cbId = (checkboxIdInput && checkboxIdInput.value || '').trim();
+      const label = (checkboxLabelInput && checkboxLabelInput.value || '').trim();
+      if (!cbId || !label) return alert('Please enter Checkbox id and Label');
+      try {
+        // Register as a custom checkbox field and seed values Checked/Unchecked
+        await addCheckboxField(cbId, label);
+        // Also register as a testable field so it can be chosen for Sandbox/Test
+        try { await addTestableField(deriveKeyFromSelector(cbId), label); } catch (_) {}
+        await loadFieldManager();
+        await populateFieldToTestSelect();
+        checkboxIdInput.value = '';
+        checkboxLabelInput.value = '';
+      } catch (e) {
+        alert((e && e.message) || String(e));
+      }
+    });
+  }
+  if (removeCheckboxFieldBtn) {
+    removeCheckboxFieldBtn.addEventListener('click', async () => {
+      const cbId = (checkboxIdInput && checkboxIdInput.value || '').trim();
+      if (!cbId) return alert('Enter Checkbox id to remove');
+      try {
+        await removeDomFieldBySelector(cbId);
+        await loadFieldManager();
+        await populateFieldToTestSelect();
+      } catch (e) { alert((e && e.message) || String(e)); }
     });
   }
 });
